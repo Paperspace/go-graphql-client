@@ -1,20 +1,10 @@
 graphql
 =======
 
-[![Build Status](https://travis-ci.org/shurcooL/graphql.svg?branch=master)](https://travis-ci.org/shurcooL/graphql) [![GoDoc](https://godoc.org/github.com/shurcooL/graphql?status.svg)](https://godoc.org/github.com/shurcooL/graphql)
+[![GoDoc](https://godoc.org/github.com/Paperspace/graphql?status.svg)](https://godoc.org/github.com/Paperspace/go-graphql-client)
 
 Package `graphql` provides a GraphQL client implementation.
-
-For more information, see package [`github.com/shurcooL/githubv4`](https://github.com/shurcooL/githubv4), which is a specialized version targeting GitHub GraphQL API v4. That package is driving the feature development.
-
-Installation
-------------
-
-`graphql` requires Go version 1.8 or later.
-
-```bash
-go get -u github.com/shurcooL/graphql
-```
+Requires Go version 1.15 or later.
 
 Usage
 -----
@@ -28,7 +18,8 @@ client := graphql.NewClient("https://example.com/graphql", nil)
 
 ### Authentication
 
-Some GraphQL servers may require authentication. The `graphql` package does not directly handle authentication. Instead, when creating a new client, you're expected to pass an `http.Client` that performs authentication. The easiest and recommended way to do this is to use the [`golang.org/x/oauth2`](https://golang.org/x/oauth2) package. You'll need an OAuth token with the right scopes. Then:
+Servers have different ways of doing authentication. 
+If your target server supports OAuth2, pass an `http.Client` like so: 
 
 ```Go
 import "golang.org/x/oauth2"
@@ -41,6 +32,17 @@ func main() {
 
 	client := graphql.NewClient("https://example.com/graphql", httpClient)
 	// Use client...
+```
+
+> See https://golang.org/x/oauth2 for more information.
+
+For all other forms of authentication, pass in a function to write your own http headers 
+```Go
+func main() {
+	client := graphql.NewClient("https://example.com/graphql", nil, func(h http.Header) error {
+		h.Add("Authorization", fmt.Sprintf("Bearer %s", "insert-api-token-here"))
+	})
+}
 ```
 
 ### Simple Query
@@ -281,9 +283,9 @@ Directories
 
 | Path                                                                                   | Synopsis                                                                                                        |
 |----------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| [example/graphqldev](https://godoc.org/github.com/shurcooL/graphql/example/graphqldev) | graphqldev is a test program currently being used for developing graphql package.                               |
-| [ident](https://godoc.org/github.com/shurcooL/graphql/ident)                           | Package ident provides functions for parsing and converting identifier names between various naming convention. |
-| [internal/jsonutil](https://godoc.org/github.com/shurcooL/graphql/internal/jsonutil)   | Package jsonutil provides a function for decoding JSON into a GraphQL query data structure.                     |
+| [example/graphqldev](https://godoc.org/github.com/Paperspace/go-graphql-client/example/graphqldev) | graphqldev is a test program currently being used for developing graphql package.                               |
+| [ident](https://godoc.org/github.com/Paperspace/graphql/ident)                           | Package ident provides functions for parsing and converting identifier names between various naming convention. |
+| [internal/jsonutil](https://godoc.org/github.com/Paperspace/go-graphql-client/internal/jsonutil)   | Package jsonutil provides a function for decoding JSON into a GraphQL query data structure.                     |
 
 License
 -------

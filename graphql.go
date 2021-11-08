@@ -8,25 +8,36 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/shurcooL/graphql/internal/jsonutil"
-	"golang.org/x/net/context/ctxhttp"
+	"github.com/Paperspace/go-graphql-client/internal/jsonutil"
 )
+
+// WriteHeadersFunc is a function signature that writes headers.
+type WriteHeadersFunc func(h http.Header) error
 
 // Client is a GraphQL client.
 type Client struct {
-	url        string // GraphQL server URL.
-	httpClient *http.Client
+	url         string // GraphQL server URL.
+	httpClient  *http.Client
+	headersFunc WriteHeadersFunc
+}
+
+// noopHeaders is for NewClient overload.
+func noopHeaders(h http.Header) error {
+	return nil
 }
 
 // NewClient creates a GraphQL client targeting the specified GraphQL server URL.
 // If httpClient is nil, then http.DefaultClient is used.
 func NewClient(url string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		httpClient = http.DefaultClient
-	}
+	return NewClientWithHeaders(url, httpClient, noopHeaders)
+}
+
+// NewClientWithHeaders creates a GraphQL client that allows overriding headers
+func NewClientWithHeaders(url string, httpClient *http.Client, headersFunc WriteHeadersFunc) *Client {
 	return &Client{
-		url:        url,
-		httpClient: httpClient,
+		url:         url,
+		httpClient:  httpClient,
+		headersFunc: headersFunc,
 	}
 }
 
@@ -46,6 +57,7 @@ func (c *Client) Mutate(ctx context.Context, m interface{}, variables map[string
 
 // do executes a single GraphQL operation.
 func (c *Client) do(ctx context.Context, op operationType, v interface{}, variables map[string]interface{}) error {
+	// Build request.
 	var query string
 	switch op {
 	case queryOperation:
@@ -60,12 +72,21 @@ func (c *Client) do(ctx context.Context, op operationType, v interface{}, variab
 		Query:     query,
 		Variables: variables,
 	}
-	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(in)
+	buf := new(bytes.Buffer)
+	if err := json.NewEncoder(buf).Encode(in); err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, buf)
 	if err != nil {
 		return err
 	}
-	resp, err := ctxhttp.Post(ctx, c.httpClient, c.url, "application/json", &buf)
+	req.Header.Add("Content-type", "application/json")
+	if err := c.headersFunc(req.Header); err != nil {
+		return err
+	}
+
+	// Make request.
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
