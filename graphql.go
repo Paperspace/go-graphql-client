@@ -16,6 +16,7 @@ type WriteHeadersFunc func(h http.Header) error
 
 // Client is a GraphQL client.
 type Client struct {
+	Debug       bool
 	url         string // GraphQL server URL.
 	httpClient  *http.Client
 	headersFunc WriteHeadersFunc
@@ -72,11 +73,15 @@ func (c *Client) do(ctx context.Context, op operationType, v interface{}, variab
 		Query:     query,
 		Variables: variables,
 	}
-	buf := new(bytes.Buffer)
-	if err := json.NewEncoder(buf).Encode(in); err != nil {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(in); err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, buf)
+	if c.Debug {
+		buf2 := buf
+		fmt.Println(buf2.String())
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url, &buf)
 	if err != nil {
 		return err
 	}
